@@ -1,0 +1,316 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>С Днём Рождения, Жамиля!</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    background: #0a0a1a;
+    font-family: 'Segoe UI', sans-serif;
+    overflow: hidden;
+    height: 100vh;
+    color: #fff;
+  }
+  #fireworks { position: fixed; inset: 0; z-index: 0; }
+
+  .screen {
+    position: fixed; inset: 0; z-index: 10;
+    display: none;
+    flex-direction: column;
+    align-items: center; justify-content: center;
+    text-align: center; padding: 20px;
+    overflow-y: auto;
+  }
+  .screen.active { display: flex; }
+
+  h1, h2 {
+    font-size: clamp(2rem, 6vw, 4rem);
+    animation: glow 2s infinite;
+    margin-bottom: 20px;
+  }
+  @keyframes glow {
+    0%, 100% { text-shadow: 0 0 10px #fff, 0 0 20px #ff00de, 0 0 40px #ff00de; }
+    50% { text-shadow: 0 0 20px #fff, 0 0 40px #ff00de, 0 0 80px #ff00de; }
+  }
+  @keyframes fadeInUp {
+    from { opacity: 0; transform: translateY(40px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+  .subtitle {
+    font-size: 1.1rem; color: #ccc;
+    margin-bottom: 25px;
+    animation: fadeInUp 1s ease-out 1s both;
+  }
+  button {
+    padding: 15px 40px; font-size: 1.1rem;
+    border: 2px solid #ff00de; background: transparent;
+    color: #fff; border-radius: 50px; cursor: pointer;
+    transition: all 0.3s; margin: 8px;
+  }
+  button:hover { background: #ff00de; box-shadow: 0 0 30px #ff00de; }
+
+  .question-box {
+    max-width: 600px; width: 100%;
+    background: rgba(30, 0, 60, 0.9);
+    border: 2px solid #6600ff;
+    border-radius: 20px;
+    padding: 30px;
+    box-shadow: 0 0 40px rgba(102, 0, 255, 0.5);
+    animation: fadeInUp 0.6s ease-out;
+  }
+  .question-text {
+    font-size: 1.3rem; margin-bottom: 20px;
+    line-height: 1.6;
+  }
+  textarea {
+    width: 100%; min-height: 100px;
+    padding: 15px; font-size: 1rem;
+    font-family: 'Segoe UI', sans-serif;
+    border-radius: 15px;
+    border: 2px solid #6600ff;
+    background: rgba(0, 0, 0, 0.4);
+    color: #fff;
+    resize: vertical;
+    outline: none;
+  }
+  textarea:focus { border-color: #ff00de; box-shadow: 0 0 20px rgba(255, 0, 222, 0.5); }
+
+  .btn-row {
+    display: flex; gap: 10px; margin-top: 15px;
+    flex-wrap: wrap; justify-content: center;
+  }
+  .btn-send {
+    background: #ff00de; border-color: #ff00de;
+    font-weight: bold;
+  }
+  .btn-send:hover { background: #cc00b3; }
+  .btn-skip {
+    border-color: #666; color: #aaa;
+    font-size: 0.9rem; padding: 10px 20px;
+  }
+  .btn-skip:hover { background: #333; box-shadow: none; }
+
+  .progress {
+    color: #ff99ff; font-size: 0.9rem;
+    margin-bottom: 15px;
+  }
+
+  /* Экран с видео */
+  .video-box {
+    max-width: 650px; width: 100%;
+    animation: fadeInUp 0.8s ease-out;
+  }
+  .video-box video {
+    width: 100%;
+    border: 2px solid #6600ff;
+    border-radius: 20px;
+    box-shadow: 0 0 40px rgba(102, 0, 255, 0.6);
+    background: #000;
+  }
+  .video-caption {
+    margin-top: 15px;
+    color: #ff99ff;
+    font-style: italic;
+    font-size: 1rem;
+    margin-bottom: 15px;
+  }
+  #continueBtn { display: none; } /* Кнопка скрыта, пока видео не доиграет */
+
+  .final-screen {
+    max-width: 650px;
+    animation: fadeInUp 1s ease-out;
+    padding: 20px;
+  }
+  .final-screen h2 {
+    font-size: clamp(1.8rem, 5vw, 2.8rem);
+    margin-bottom: 20px;
+  }
+  .final-screen p {
+    margin-bottom: 16px; line-height: 1.7;
+    font-size: 1.05rem;
+  }
+  .final-screen .ps {
+    color: #ff99ff; font-style: italic;
+    margin-top: 20px; font-size: 0.95rem;
+  }
+
+  .petal {
+    position: fixed; top: -50px;
+    font-size: 1.5rem; pointer-events: none;
+    animation: fall linear infinite; z-index: 15;
+  }
+  @keyframes fall {
+    to { transform: translateY(110vh) rotate(360deg); }
+  }
+</style>
+</head>
+<body>
+
+<div id="fireworks"></div>
+
+<!-- Музыка -->
+<audio id="bgMusic" loop>
+  <source src="https://cdn.pixabay.com/audio/2022/05/27/audio_1808fbf07a.mp3" type="audio/mpeg">
+</audio>
+
+<!-- ЭКРАН 1: Поздравление -->
+<div class="screen active" id="screen1">
+  <h1 id="title"></h1>
+  <p class="subtitle">Сегодня твой день. И он должен быть красивым.</p>
+  <button onclick="startGame()">Начать →</button>
+</div>
+
+<!-- ЭКРАН 2: Вопросы -->
+<div class="screen" id="screen2">
+  <div class="question-box">
+    <p class="progress" id="progress"></p>
+    <p class="question-text" id="questionText"></p>
+    <textarea id="answerInput" placeholder="Напиши свой ответ..."></textarea>
+    <div class="btn-row">
+      <button class="btn-send" onclick="sendAnswer()">Отправить →</button>
+      <button class="btn-skip" onclick="skipAnswer()">Пропустить</button>
+    </div>
+  </div>
+</div>
+
+<!-- ЭКРАН 2.5: Видео-пауза -->
+<div class="screen" id="screenVideo">
+  <div class="video-box">
+    <video id="peterVideo" controls playsinline autoplay onended="document.getElementById('continueBtn').style.display='inline-block';">
+      <source src="Video Project 9 (2).mp4" type="video/mp4">
+    </video>
+    <p class="video-caption">Иногда даже супергерои говорят важные вещи. Посмотри — и продолжим.</p>
+    <button id="continueBtn" onclick="continueAfterVideo()">Продолжить →</button>
+  </div>
+</div>
+
+<!-- ЭКРАН 3: Финал -->
+<div class="screen" id="screen3">
+  <div class="final-screen">
+    <h2>С Днём Рождения, Жамиля! 🎉</h2>
+    <p>Я долго думал, что тебе сказать. И понял, что не хочу давить или что-то требовать. Я просто хотел, чтобы ты знала: я тебя не забыл.</p>
+    <p>Прости за мои ошибки. Я не буду перечислять, ты и так знаешь. Просто знай, что я это правда осознал. Это не попытка что-то от тебя получить — это просто мой подарок. Мне не нужно ничего взамен.</p>
+    <p>Я искренне желаю тебе счастья, любви и всего самого наилучшего. Чтобы ты поступила в топовый вуз, чтобы Иман твой становился только крепче с каждым днём. Оставайся такой же доброй, милой, красивой и умной девушкой — такой, какой я тебя помню. Пусть каждый твой день будет наполнен улыбками, тёплыми людьми и моментами, которые захочется сохранить в памяти навсегда.</p>
+    <p>Если захочешь поговорить — я здесь. Если нет — я пойму. Будь счастлива. По-настоящему.</p>
+  </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/fireworks-js@2.10.7/dist/index.umd.js"></script>
+<script>
+  // === САЛЮТ ===
+  const container = document.getElementById('fireworks');
+  const fireworks = new Fireworks.default(container, {
+    rocketsPoint: { min: 50, max: 50 },
+    hue: { min: 0, max: 360 },
+    delay: { min: 15, max: 30 },
+    speed: 2, acceleration: 1.05, friction: 0.98,
+    gravity: 1.5, particles: 80, explosion: 8, autoresize: true
+  });
+  fireworks.start();
+
+  // === ТЕКСТ ПО БУКВАМ ===
+  const text = "С Днём Рождения, Жамиля!";
+  const el = document.getElementById('title');
+  text.split('').forEach((char, i) => {
+    const span = document.createElement('span');
+    span.textContent = char === ' ' ? '\u00A0' : char;
+    span.style.display = 'inline-block';
+    span.style.animation = `fadeInUp 0.5s ease-out ${i * 0.08}s both`;
+    el.appendChild(span);
+  });
+
+  // === ВОПРОСЫ ===
+  const questions = [
+    "Какая твоя самая большая мечта прямо сейчас? Не про учебу, а про жизнь.",
+    "Что ты почувствовала, когда первый раз взяла меня за руку?",
+    "Опиши меня тремя словами. Только честно, я не обижусь 😉",
+    "Как думаешь, если бы можно было отмотать время назад и изменить одну вещь в нашей истории, что бы это было?",
+    "Как думаешь, если бы мы сейчас оказались на том самом месте, где ты взяла меня за руку, чтобы ты сделала?"
+  ];
+
+  let currentIndex = 0;
+  const answers = [];
+  let videoShown = false;
+  const VIDEO_AFTER_INDEX = 3; // показать видео после 3-го вопроса
+
+  // === СТАРТ ИГРЫ И МУЗЫКА ===
+  function startGame() {
+    const music = document.getElementById('bgMusic');
+    music.volume = 0.4; // Громкость 40%, чтобы не оглушило
+    music.play().catch(e => console.log("Браузер заблокировал автоплей, но музыка пойдет после клика"));
+
+    document.getElementById('screen1').classList.remove('active');
+    document.getElementById('screen2').classList.add('active');
+    showQuestion();
+  }
+
+  // === ПОКАЗ ВОПРОСА ===
+  function showQuestion() {
+    if (currentIndex >= questions.length) {
+      showFinal();
+      return;
+    }
+    document.getElementById('progress').textContent = `Вопрос ${currentIndex + 1} из ${questions.length}`;
+    document.getElementById('questionText').textContent = questions[currentIndex];
+    document.getElementById('answerInput').value = '';
+    document.getElementById('answerInput').focus();
+  }
+
+  // === ОТВЕТЫ ===
+  function sendAnswer() {
+    const val = document.getElementById('answerInput').value.trim();
+    if (!val) {
+      alert("Напиши хоть что-нибудь, или нажми «Пропустить» 😊");
+      return;
+    }
+    answers.push({ question: questions[currentIndex], answer: val });
+    currentIndex++;
+    afterAnswer();
+  }
+
+  function skipAnswer() {
+    answers.push({ question: questions[currentIndex], answer: "— пропущено —" });
+    currentIndex++;
+    afterAnswer();
+  }
+
+  function afterAnswer() {
+    // Если ответили на 3-й вопрос, показываем видео
+    if (!videoShown && currentIndex === VIDEO_AFTER_INDEX) {
+      videoShown = true;
+      document.getElementById('screen2').classList.remove('active');
+      document.getElementById('screenVideo').classList.add('active');
+    } else {
+      showQuestion();
+    }
+  }
+
+  function continueAfterVideo() {
+    document.getElementById('screenVideo').classList.remove('active');
+    document.getElementById('screen2').classList.add('active');
+    showQuestion();
+  }
+
+  // === ФИНАЛ ===
+  function showFinal() {
+    document.getElementById('screen2').classList.remove('active');
+    document.getElementById('screen3').classList.add('active');
+  }
+
+  // === ЛЕПЕСТКИ ===
+  const petals = ['🌸', '🌺', '🌷', '💮', '🏵️'];
+  setInterval(() => {
+    const p = document.createElement('div');
+    p.className = 'petal';
+    p.textContent = petals[Math.floor(Math.random() * petals.length)];
+    p.style.left = Math.random() * 100 + 'vw';
+    p.style.animationDuration = (5 + Math.random() * 5) + 's';
+    p.style.fontSize = (1 + Math.random() * 1.5) + 'rem';
+    document.body.appendChild(p);
+    setTimeout(() => p.remove(), 10000);
+  }, 500);
+</script>
+</body>
+</html>
